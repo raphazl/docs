@@ -151,7 +151,7 @@ Para garantir a estabilidade da plataforma, a API aplica limites de requisição
 Ao atingir o limite, a API retorna `429 Too Many Requests`. Aguarde o período indicado no header `Retry-After` antes de tentar novamente.
 
 <Warning>
-  Polling excessivo no `/pix/check` (intervalo menor que 2s) pode acionar o rate limiter. Use [webhooks](/webhooks/introducao) sempre que possível.
+  Polling excessivo no `/pix/check` (intervalo menor que 2s) pode acionar o rate limiter. Use [webhooks](/api-reference/webhooks) sempre que possível.
 </Warning>
 
 ---
@@ -167,7 +167,7 @@ Ao atingir o limite, a API retorna `429 Too Many Requests`. Aguarde o período i
     Verifique se uma cobrança foi paga, expirou ou falhou.
   </Card>
 
-  <Card title="Webhooks" icon="bell" href="/webhooks">
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
     Receba notificações automáticas quando o pagamento for confirmado.
   </Card>
 

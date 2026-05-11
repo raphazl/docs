@@ -18,7 +18,7 @@ Quando o status de uma cobrança PIX muda, o Gekko Pay envia automaticamente um 
 
 ## Eventos disponíveis
 
-Todos os eventos seguem o formato `transaction.<status>`. Confira os detalhes e payloads na página [Eventos](/webhooks/eventos).
+Todos os eventos seguem o formato `transaction.<status>`. Confira os detalhes e payloads na página [Eventos](/api-reference/webhooks/eventos).
 
 | Evento | Descrição |
 | :-- | :-- |
@@ -50,7 +50,7 @@ Todo webhook segue a mesma estrutura base:
 </ResponseField>
 
 <ResponseField name="data" type="object" required>
-  Objeto com os dados da transação. Os campos variam por evento — veja [Eventos](/webhooks/eventos).
+  Objeto com os dados da transação. Os campos variam por evento — veja [Eventos](/api-reference/webhooks/eventos).
 </ResponseField>
 
 ---
@@ -186,7 +186,7 @@ Todas as tentativas de entrega são registradas no painel em **Desenvolvedores �
 ---
 
 <CardGroup cols={2}>
-  <Card title="Ver eventos" icon="bolt" href="/webhooks/eventos">
+  <Card title="Ver eventos" icon="bolt" href="/api-reference/webhooks/eventos">
     Payloads detalhados de cada evento do ciclo de vida.
   </Card>
 
