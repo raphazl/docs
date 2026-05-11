@@ -1,0 +1,222 @@
+---
+title: "Criar Cobrança PIX"
+description: "Gere uma cobrança PIX com QR Code e código Copia e Cola em uma única chamada."
+api: "POST /pix/create"
+---
+
+## Visão geral
+
+Use este endpoint para criar uma nova cobrança PIX. Você envia os dados do pagamento e do cliente, e recebe de volta o QR Code pronto para exibir no seu checkout.
+
+---
+
+## Request
+
+```bash
+curl -X POST https://api.gekkopay.com.br/pix/create \
+  -H "Authorization: Bearer sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "PIX",
+    "data": {
+      "amount": 25000,
+      "customer": {
+        "name": "João Silva",
+        "email": "joao@email.com",
+        "phone": "21999999999",
+        "document": "09115751031"
+      },
+      "utm": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday"
+      },
+      "metadata": {
+        "order_id": "12345"
+      },
+      "webhook": "https://sua-url.com.br/webhook"
+    }
+  }'
+```
+
+### Parâmetros do body
+
+<ParamField body="method" type="string" required>
+  Deve ser `"PIX"`. Define o método de pagamento da cobrança.
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Objeto contendo todos os dados da cobrança.
+
+  <Expandable title="Campos de data">
+    <ParamField body="data.amount" type="number" required>
+      Valor em **centavos**. Exemplo: `25000` = R$ 250,00. Máximo: R$ 1.000,00.
+    </ParamField>
+
+    <ParamField body="data.customer" type="object" required>
+      Dados do cliente pagador.
+
+      <Expandable title="Campos de customer">
+        <ParamField body="data.customer.name" type="string" required>
+          Nome completo do cliente.
+        </ParamField>
+
+        <ParamField body="data.customer.email" type="string" required>
+          E-mail válido do cliente.
+        </ParamField>
+
+        <ParamField body="data.customer.phone" type="string" required>
+          Telefone do cliente. Mínimo 10 dígitos, apenas números.
+        </ParamField>
+
+        <ParamField body="data.customer.document" type="string" required>
+          CPF (11 dígitos) ou CNPJ (14 dígitos), apenas números.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+    <ParamField body="data.utm" type="object">
+      Parâmetros UTM para rastreamento de campanhas.
+
+      <Expandable title="Campos de utm">
+        <ParamField body="data.utm.source" type="string">
+          Origem do tráfego. Ex: `facebook`, `google`.
+        </ParamField>
+
+        <ParamField body="data.utm.medium" type="string">
+          Meio de marketing. Ex: `cpc`, `email`, `social`.
+        </ParamField>
+
+        <ParamField body="data.utm.campaign" type="string">
+          Nome da campanha. Ex: `black_friday`.
+        </ParamField>
+
+        <ParamField body="data.utm.term" type="string">
+          Termo de pesquisa pago.
+        </ParamField>
+
+        <ParamField body="data.utm.content" type="string">
+          Identificador do criativo. Ex: `video_01`.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+    <ParamField body="data.metadata" type="object">
+      Objeto livre para armazenar dados arbitrários. Será devolvido integralmente no webhook de pagamento. Útil para IDs de pedido, afiliados, etc.
+    </ParamField>
+
+    <ParamField body="data.webhook" type="string">
+      URL que receberá um `POST` quando o pagamento for confirmado. Deve ser uma URL pública e acessível.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+---
+
+## Response
+
+<Tabs>
+  <Tab title="200 — Sucesso">
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "683fb19a5d5de60d9bbc4e3f",
+        "amount": 25000,
+        "status": "PENDING",
+        "pixCode": "00020126580014BR.GOV.BCB.PIX0136d2b4e5f6-7890-abcd-ef12-34567890abcd5204000053039865802BR5914Mariana Costa6009SAO PAULO62070503***6304F1C2",
+        "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+        "expiresAt": "2026-05-10T21:00:00.000Z",
+        "createdAt": "2026-05-10T20:30:00.000Z",
+        "metadata": {
+          "order_id": "12345"
+        }
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:30:00.000Z"
+      }
+    }
+    ```
+
+    <ResponseField name="data.id" type="string" required>
+      Identificador único da transação. Use para consultar o status via `/pix/check`.
+    </ResponseField>
+
+    <ResponseField name="data.amount" type="number" required>
+      Valor da cobrança em centavos.
+    </ResponseField>
+
+    <ResponseField name="data.status" type="string" required>
+      Status da transação. Sempre `"PENDING"` na criação.
+    </ResponseField>
+
+    <ResponseField name="data.pixCode" type="string" required>
+      Código PIX "Copia e Cola" (EMV). Exiba para o cliente copiar e pagar no app do banco.
+    </ResponseField>
+
+    <ResponseField name="data.qrCode" type="string" required>
+      QR Code em formato `data:image/png;base64,...`. Pronto para renderizar em uma tag `<img>`.
+    </ResponseField>
+
+    <ResponseField name="data.expiresAt" type="string" required>
+      Data/hora ISO-8601 de expiração. Após esse horário, o PIX não pode mais ser pago.
+    </ResponseField>
+
+    <ResponseField name="data.createdAt" type="string" required>
+      Data/hora ISO-8601 de criação da cobrança.
+    </ResponseField>
+
+    <ResponseField name="data.metadata" type="object">
+      Espelho do objeto `metadata` enviado na criação.
+    </ResponseField>
+  </Tab>
+  <Tab title="401 — Não autenticado">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "Token de autenticação inválido ou ausente."
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:30:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="422 — Validação">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Dados inválidos",
+        "details": {
+          "data.amount": "Valor deve ser positivo",
+          "data.customer.email": "Email do cliente inválido"
+        }
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:30:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Consultar status" icon="magnifying-glass" href="/api-reference/pix-check">
+    Verifique se a cobrança já foi paga com `/pix/check`.
+  </Card>
+
+  <Card title="Receber webhook" icon="bell" href="/api-reference/webhooks">
+    Configure notificações em tempo real quando o pagamento for confirmado.
+  </Card>
+</CardGroup>

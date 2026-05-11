@@ -1,0 +1,245 @@
+---
+title: "Códigos de Erro"
+description: "Referência completa dos códigos de erro retornados pela API do Gekko Pay."
+---
+
+## Formato do erro
+
+Toda resposta de erro segue o mesmo formato:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Mensagem amigável descrevendo o problema.",
+    "details": {
+      "campo": "Detalhe opcional sobre o campo"
+    }
+  },
+  "meta": {
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "timestamp": "2026-05-10T20:30:00.000Z"
+  }
+}
+```
+
+<ResponseField name="error.code" type="string" required>
+  Código de erro estável para uso programático. Nunca muda entre versões.
+</ResponseField>
+
+<ResponseField name="error.message" type="string" required>
+  Mensagem legível para humanos. Pode mudar sem aviso — não use para lógica.
+</ResponseField>
+
+<ResponseField name="error.details" type="object">
+  Detalhes adicionais por campo. Presente apenas em erros de validação.
+</ResponseField>
+
+<ResponseField name="meta.request_id" type="string" required>
+  UUID único da requisição. Use para suporte ou debugging.
+</ResponseField>
+
+---
+
+## Erros de autenticação
+
+Relacionados à API Key enviada no header `Authorization`.
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `UNAUTHORIZED` | 401 | API Key ausente, inválida, revogada ou expirada. |
+| `ACCOUNT_NOT_READY` | 403 | Conta sem permissão para operar (KYC pendente ou inativo). |
+| `ACCOUNT_BLOCKED` | 403 | Conta bloqueada pelo administrador. |
+
+<Tabs>
+  <Tab title="API Key ausente">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "API Key não fornecida."
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="API Key inválida">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "API Key inválida ou revogada."
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Conta sem permissão">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "ACCOUNT_NOT_READY",
+        "message": "Conta sem permissão para operar."
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Erros de validação
+
+Retornados quando os campos do request estão incorretos ou faltando.
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `VALIDATION_ERROR` | 422 | Um ou mais campos são inválidos. Veja `details` para mais. |
+| `MISSING_PARAMETER` | 400 | Um parâmetro obrigatório não foi informado. |
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Dados inválidos",
+    "details": {
+      "data.amount": "Valor deve ser positivo",
+      "data.customer.email": "Email do cliente inválido",
+      "data.customer.document": "Documento inválido"
+    }
+  }
+}
+```
+
+<Tip>
+  O campo `details` lista cada campo com erro e sua mensagem. Use isso para exibir feedback específico no seu formulário.
+</Tip>
+
+---
+
+## Erros de recurso
+
+Retornados quando o recurso solicitado não existe ou não pertence à sua conta.
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `TRANSACTION_NOT_FOUND` | 404 | Transação não encontrada ou não pertence à sua conta. |
+| `USER_NOT_FOUND` | 404 | Usuário associado não encontrado. |
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TRANSACTION_NOT_FOUND",
+    "message": "Transação não encontrada."
+  }
+}
+```
+
+---
+
+## Erros de webhook
+
+Retornados quando a URL de webhook informada é inválida.
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `INVALID_WEBHOOK_URL` | 422 | URL de webhook inválida ou com protocolo não suportado. |
+| `UNSAFE_WEBHOOK_URL` | 422 | URL aponta para endereço interno ou não permitido. |
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_WEBHOOK_URL",
+    "message": "URL de webhook inválida.",
+    "details": {
+      "webhook": "A URL deve usar protocolo HTTPS."
+    }
+  }
+}
+```
+
+---
+
+## Erros de provedor
+
+Retornados quando há problemas na comunicação com o provedor de pagamento.
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `PROVIDER_ERROR` | 502 | Resposta inválida do provedor de pagamento. |
+
+<Warning>
+  Erros `502` indicam falha temporária no provedor. Tente novamente após alguns segundos com backoff exponencial.
+</Warning>
+
+---
+
+## Erros de limite
+
+| Código | HTTP | Descrição |
+| :-- | :-: | :-- |
+| `PAYLOAD_TOO_LARGE` | 413 | O payload excede o limite de 1 MB. |
+| `INTERNAL_ERROR` | 500 | Erro interno inesperado. Tente novamente. |
+
+---
+
+## Referência rápida
+
+Tabela consolidada de todos os códigos que podem aparecer nos endpoints públicos:
+
+| Código | HTTP | Quando acontece |
+| :-- | :-: | :-- |
+| `UNAUTHORIZED` | 401 | API Key ausente ou inválida |
+| `ACCOUNT_NOT_READY` | 403 | Conta sem permissão (KYC pendente) |
+| `ACCOUNT_BLOCKED` | 403 | Conta bloqueada |
+| `MISSING_PARAMETER` | 400 | Parâmetro obrigatório não informado |
+| `VALIDATION_ERROR` | 422 | Campos inválidos no request |
+| `INVALID_WEBHOOK_URL` | 422 | URL de webhook inválida |
+| `UNSAFE_WEBHOOK_URL` | 422 | URL de webhook aponta para endereço interno |
+| `TRANSACTION_NOT_FOUND` | 404 | Transação não encontrada |
+| `PROVIDER_ERROR` | 502 | Falha no provedor de pagamento |
+| `PAYLOAD_TOO_LARGE` | 413 | Payload excede 1 MB |
+| `INTERNAL_ERROR` | 500 | Erro interno inesperado |
+
+---
+
+## Como lidar com erros
+
+<AccordionGroup>
+  <Accordion title="Sempre verifique o campo success">
+    Nunca confie apenas no status HTTP. Sempre cheque `success === true` antes de acessar `data`.
+  </Accordion>
+
+  <Accordion title="Use o code para lógica, não a message">
+    O `code` é estável e não muda. A `message` é para exibir ao usuário e pode mudar sem aviso.
+  </Accordion>
+
+  <Accordion title="Erros 502 — tente novamente">
+    Erros de provedor são temporários. Implemente retry com backoff exponencial (1s, 2s, 4s...).
+  </Accordion>
+
+  <Accordion title="Erros 422 — verifique os details">
+    O campo `details` mostra exatamente quais campos estão errados e por quê.
+  </Accordion>
+
+  <Accordion title="Salve o request_id">
+    Em caso de problema, envie o `request_id` para o suporte. Ele permite rastrear a requisição nos logs.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Criar cobrança" icon="qrcode" href="/api-reference/pix-create">
+    Crie uma cobrança PIX via API.
+  </Card>
+
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
+    Configure notificações automáticas.
+  </Card>
+</CardGroup>

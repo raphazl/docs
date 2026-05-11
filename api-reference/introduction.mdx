@@ -1,0 +1,177 @@
+---
+title: "Introdução"
+description: "Base URL, autenticação, formato de resposta, códigos de status e limites da API."
+---
+
+## Base URL
+
+Todas as requisições usam o seguinte endereço:
+
+```text
+https://api.gekkopay.com.br/
+```
+
+<Warning>
+  Sempre use HTTPS. Requisições via HTTP serão rejeitadas.
+</Warning>
+
+---
+
+## Autenticação
+
+Toda requisição deve incluir sua **Secret Key** no header `Authorization`:
+
+```text
+Authorization: Bearer sk_live_...
+```
+
+Além disso, envie sempre o header `Content-Type`:
+
+```text
+Content-Type: application/json
+```
+
+<Info>
+  Requisições sem chave ou com chave inválida retornam `401 Unauthorized`. Crie e gerencie suas chaves na página [Desenvolvedores](https://app.gekkopay.com.br/dashboard/developers).
+</Info>
+
+---
+
+## Quickstart
+
+Crie sua primeira cobrança PIX em 30 segundos:
+
+```bash
+curl -X POST https://api.gekkopay.com.br/pix/create \
+  -H "Authorization: Bearer sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "PIX",
+    "data": {
+      "amount": 1000,
+      "customer": {
+        "name": "João Silva",
+        "email": "joao@email.com",
+        "phone": "21999999999",
+        "document": "09115751031"
+      }
+    }
+  }'
+```
+
+<Tip>
+  O campo `amount` é em **centavos**. `1000` = R\$ 10,00.
+</Tip>
+
+---
+
+## Formato de resposta
+
+Todos os endpoints retornam JSON com a mesma estrutura:
+
+<Tabs>
+  <Tab title="Sucesso">
+    ```json
+    {
+      "success": true,
+      "data": {},
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T12:00:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Erro">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Dados inválidos",
+        "details": {
+          "data.amount": "Valor deve ser positivo"
+        }
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T12:00:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<ResponseField name="success" type="boolean" required>
+  `true` se a operação foi bem-sucedida, `false` caso contrário.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Dados da resposta. Presente apenas quando `success` é `true`.
+</ResponseField>
+
+<ResponseField name="error" type="object">
+  Detalhes do erro. Presente apenas quando `success` é `false`. Veja [Códigos de Erro](/api-reference/erros).
+</ResponseField>
+
+<ResponseField name="meta.request_id" type="string" required>
+  UUID único da requisição. Envie ao suporte em caso de problemas.
+</ResponseField>
+
+<Info>
+  Sempre verifique `success` antes de acessar `data`. Nunca assuma que a requisição funcionou apenas pelo status HTTP.
+</Info>
+
+---
+
+## Códigos de status HTTP
+
+| **Código** | **Significado** |
+| :-- | :-- |
+| `200` | Sucesso — a operação foi realizada com êxito. |
+| `400` | Requisição inválida — verifique os campos enviados. |
+| `401` | Não autenticado — chave ausente, inválida ou revogada. |
+| `403` | Sem permissão — conta bloqueada ou KYC pendente. |
+| `404` | Recurso não encontrado — verifique o ID informado. |
+| `422` | Erro de validação — campos presentes mas semanticamente inválidos. |
+| `429` | Rate limit — muitas requisições em curto período. Aguarde e tente novamente. |
+| `502` | Falha no provedor de pagamento — tente novamente com backoff. |
+| `500` | Erro interno — tente novamente com backoff exponencial. |
+
+---
+
+## Rate limits
+
+Para garantir a estabilidade da plataforma, a API aplica limites de requisição:
+
+| Plano | Limite |
+| :-- | :-- |
+| Padrão | 60 requisições por minuto |
+
+Ao atingir o limite, a API retorna `429 Too Many Requests`. Aguarde o período indicado no header `Retry-After` antes de tentar novamente.
+
+<Warning>
+  Polling excessivo no `/pix/check` (intervalo menor que 2s) pode acionar o rate limiter. Use [webhooks](/webhooks/introducao) sempre que possível.
+</Warning>
+
+---
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Criar cobrança PIX" icon="qrcode" href="/api-reference/pix-create">
+    Gere uma cobrança com QR Code em uma única chamada.
+  </Card>
+
+  <Card title="Consultar status" icon="magnifying-glass" href="/api-reference/pix-check">
+    Verifique se uma cobrança foi paga, expirou ou falhou.
+  </Card>
+
+  <Card title="Webhooks" icon="bell" href="/webhooks">
+    Receba notificações automáticas quando o pagamento for confirmado.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/api-reference/erros">
+    Referência completa de erros e como tratá-los.
+  </Card>
+</CardGroup>

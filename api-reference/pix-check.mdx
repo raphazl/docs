@@ -1,0 +1,141 @@
+---
+title: "Consultar Status"
+description: "Verifique em tempo real se uma cobrança PIX foi paga, expirou ou ainda está pendente."
+api: "GET /pix/check"
+---
+
+## Visão geral
+
+Consulte o status atual de uma cobrança criada via `/pix/create`. Ideal para polling no frontend enquanto o cliente ainda não pagou.
+
+<Info>
+  Para receber a confirmação automaticamente sem precisar fazer polling, configure um [webhook](/api-reference/webhooks) na criação da cobrança.
+</Info>
+
+---
+
+## Request
+
+```bash
+curl -X GET "https://api.gekkopay.com.br/pix/check?id=683fb19a5d5de60d9bbc4e3f" \
+  -H "Authorization: Bearer sk_live_..."
+```
+
+### Query parameters
+
+<ParamField query="id" type="string" required>
+  ID da transação retornado no `/pix/create`.
+</ParamField>
+
+---
+
+## Response
+
+<Tabs>
+  <Tab title="200 — Sucesso">
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "683fb19a5d5de60d9bbc4e3f",
+        "status": "PENDING",
+        "expiresAt": "2026-05-10T21:00:00.000Z"
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:35:00.000Z"
+      }
+    }
+    ```
+
+    <ResponseField name="data.id" type="string" required>
+      Identificador único da transação.
+    </ResponseField>
+
+    <ResponseField name="data.status" type="string" required>
+      Status atual da cobrança. Valores possíveis abaixo.
+    </ResponseField>
+
+    <ResponseField name="data.expiresAt" type="string" required>
+      Data/hora ISO-8601 de expiração da cobrança.
+    </ResponseField>
+  </Tab>
+  <Tab title="401 — Não autenticado">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "Token de autenticação inválido ou ausente."
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:35:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="404 — Não encontrado">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "TRANSACTION_NOT_FOUND",
+        "message": "Transação não encontrada."
+      },
+      "meta": {
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2026-05-10T20:35:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Status possíveis
+
+| Status | Descrição |
+| :-- | :-- |
+| `PENDING` | Aguardando pagamento. O QR Code ainda é válido. |
+| `PAID` | Pagamento confirmado. O valor já foi creditado na conta do vendedor. |
+| `EXPIRED` | O tempo limite de pagamento foi excedido. Crie uma nova cobrança. |
+| `FAILED` | Erro no processamento. Tente novamente. |
+
+---
+
+## Exemplo de polling
+
+<Steps>
+  <Step title="Crie a cobrança">
+    Faça um `POST /pix/create` e salve o `data.id` retornado.
+  </Step>
+  <Step title="Exiba o QR Code">
+    Renderize o `qrCode` e o `pixCode` no checkout para o cliente.
+  </Step>
+  <Step title="Faça polling do status">
+    Chame `GET /pix/check?id=...` a cada **3–5 segundos**.
+  </Step>
+  <Step title="Detecte o pagamento">
+    Quando `status` mudar para `PAID`, redirecione o cliente para a página de sucesso.
+  </Step>
+</Steps>
+
+<Warning>
+  Não faça polling com intervalo menor que 2 segundos. Requisições excessivas podem ser limitadas pelo rate limiter.
+</Warning>
+
+---
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Criar cobrança" icon="qrcode" href="/api-reference/pix-create">
+    Veja como criar uma cobrança PIX via API.
+  </Card>
+
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
+    Receba notificações automáticas em vez de fazer polling.
+  </Card>
+</CardGroup>

@@ -1,0 +1,196 @@
+---
+title: "Introdução"
+description: "Entenda como funcionam os webhooks do Gekko Pay, como configurar e boas práticas para recebimento."
+---
+
+## Como funciona
+
+Quando o status de uma cobrança PIX muda, o Gekko Pay envia automaticamente um `POST` com os dados da transação para as URLs configuradas. Isso elimina a necessidade de polling e permite que seu sistema reaja instantaneamente.
+
+<Info>
+  O webhook é disparado em duas vias simultaneamente:
+
+  - **Postback URL** — a URL que você enviou no campo `webhook` ao [criar a cobrança](/api-reference/pix-create).
+  - **Webhooks globais** — URLs fixas configuradas na aba [Desenvolvedores](https://app.gekkopay.com.br/dashboard/developers) do painel.
+</Info>
+
+---
+
+## Eventos disponíveis
+
+Todos os eventos seguem o formato `transaction.<status>`. Confira os detalhes e payloads na página [Eventos](/webhooks/eventos).
+
+| Evento | Descrição |
+| :-- | :-- |
+| `transaction.created` | Nova cobrança PIX gerada, aguardando pagamento. |
+| `transaction.paid` | Pagamento confirmado, valor líquido creditado. |
+| `transaction.failed` | Transação falhou ou rejeitada pelo provedor. |
+| `transaction.expired` | Tempo limite excedido sem receber o PIX. |
+
+---
+
+## Formato do payload
+
+Todo webhook segue a mesma estrutura base:
+
+```json
+{
+  "event": "transaction.<status>",
+  "data": {
+    "id": "683fb19a5d5de60d9bbc4e3f",
+    "amount": 25000,
+    "status": "<status>",
+    "metadata": {}
+  }
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Tipo do evento. Sempre no formato `transaction.<status>`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Objeto com os dados da transação. Os campos variam por evento — veja [Eventos](/webhooks/eventos).
+</ResponseField>
+
+---
+
+## Como configurar
+
+<Steps>
+  <Step title="Crie um endpoint público">
+    Exponha uma rota `POST` no seu servidor que aceite JSON. Exemplo: `https://sua-url.com.br/webhook`.
+  </Step>
+  <Step title="Informe a URL na cobrança">
+    Passe a URL no campo `data.webhook` ao chamar `/pix/create`, ou configure globalmente no painel em **Desenvolvedores → Webhooks**.
+  </Step>
+  <Step title="Identifique o evento">
+    Ao receber o `POST`, verifique o campo `event` para saber qual ação tomar.
+  </Step>
+  <Step title="Retorne HTTP 200">
+    Responda com status `200` para confirmar o recebimento. Qualquer outro status será considerado falha de entrega.
+  </Step>
+</Steps>
+
+---
+
+## Exemplo básico
+
+<Tabs>
+  <Tab title="Node.js (Express)">
+    ```javascript
+    app.post('/webhook', express.json(), (req, res) => {
+      const { event, data } = req.body;
+    
+      switch (event) {
+        case 'transaction.paid':
+          console.log(`Pagamento confirmado: ${data.id}`);
+          console.log(`Líquido: R$ ${(data.net_amount / 100).toFixed(2)}`);
+          // Liberar produto, enviar e-mail, etc.
+          break;
+    
+        case 'transaction.failed':
+          console.log(`Falhou: ${data.id} — ${data.reason}`);
+          // Cancelar pedido
+          break;
+    
+        case 'transaction.expired':
+          console.log(`Expirou: ${data.id}`);
+          break;
+      }
+    
+      res.status(200).json({ received: true });
+    });
+    ```
+  </Tab>
+  <Tab title="Python (Flask)">
+    ```python
+    from flask import Flask, request, jsonify
+    
+    app = Flask(__name__)
+    
+    @app.route('/webhook', methods=['POST'])
+    def webhook():
+        payload = request.get_json()
+        event = payload.get('event')
+        data = payload.get('data', {})
+    
+        if event == 'transaction.paid':
+            print(f"Pago! Líquido: R$ {data['net_amount'] / 100:.2f}")
+        elif event == 'transaction.failed':
+            print(f"Falhou: {data['reason']}")
+    
+        return jsonify({'received': True}), 200
+    ```
+  </Tab>
+  <Tab title="PHP">
+    ```php
+    <?php
+    $payload = json_decode(file_get_contents('php://input'), true);
+    $event = $payload['event'] ?? '';
+    $data = $payload['data'] ?? [];
+    
+    if ($event === 'transaction.paid') {
+        error_log("Pago! Líquido: R$ " . number_format($data['net_amount'] / 100, 2, ',', '.'));
+    } elseif ($event === 'transaction.failed') {
+        error_log("Falhou: " . $data['reason']);
+    }
+    
+    http_response_code(200);
+    echo json_encode(['received' => true]);
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Boas práticas
+
+<AccordionGroup>
+  <Accordion title="Sempre retorne 200 rapidamente">
+    Processe a lógica pesada de forma assíncrona (fila, job, etc). O webhook tem timeout curto — se demorar, será registrado como falha.
+  </Accordion>
+
+  <Accordion title="Seja idempotente">
+    O mesmo webhook pode ser entregue mais de uma vez. Verifique se o `data.id` já foi processado antes de executar a lógica novamente.
+  </Accordion>
+
+  <Accordion title="Valide a origem">
+    Sempre verifique se o `data.id` corresponde a uma transação real no seu banco de dados. Nunca confie cegamente no payload.
+  </Accordion>
+
+  <Accordion title="Use HTTPS">
+    Seu endpoint deve usar HTTPS. URLs com HTTP simples serão rejeitadas.
+  </Accordion>
+
+  <Accordion title="Use metadata para reconciliação">
+    Envie IDs internos no campo `metadata` ao criar a cobrança. Quando o webhook chegar, você sabe exatamente a qual pedido ele se refere.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Logs de entrega
+
+Todas as tentativas de entrega são registradas no painel em **Desenvolvedores → Webhooks → Logs**. Cada log inclui:
+
+- URL de destino
+- Payload enviado
+- Status HTTP da resposta
+- Se a entrega foi bem-sucedida ou não
+
+<Warning>
+  O webhook é enviado uma única vez. Não há retentativas automáticas. Se a entrega falhar, use `/pix/check` para consultar o status manualmente.
+</Warning>
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Ver eventos" icon="bolt" href="/webhooks/eventos">
+    Payloads detalhados de cada evento do ciclo de vida.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/api-reference/erros">
+    Referência completa de todos os códigos de erro da API.
+  </Card>
+</CardGroup>

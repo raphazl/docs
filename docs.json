@@ -1,0 +1,81 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "GekkoPay",
+  "colors": {
+    "primary": "#6D54CF",
+    "light": "#6D54CF",
+    "dark": "#6D54CF"
+  },
+  "favicon": "/images/logo.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Comece aqui",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Transações",
+            "pages": [
+              "api-reference/pix-create",
+              "api-reference/pix-check"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks",
+              "api-reference/webhooks/eventos"
+            ]
+          },
+          {
+            "group": "Erros",
+            "pages": [
+              "api-reference/erros"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/images/logo.png",
+    "dark": "/images/logo.png"
+  },
+  "navbar": {
+    "links": [],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://dashboard.mintlify.com"
+    }
+  },
+  "contextual": {
+    "options": [
+     "copy",
+     "view",
+     "chatgpt",
+     "claude",
+     "perplexity",
+     "mcp",
+     "cursor",
+     "vscode"
+   ]
+  },
+  "footer": {
+    "socials": {
+      "instagram": "https://instagram.com/gekko.pay"
+    }
+  },
+  "fonts": {
+    "family": "Sora"
+  },
+  "background": {
+    "decoration": "gradient"
+  }
+}
